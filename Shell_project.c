@@ -5,6 +5,11 @@ Sistemas Operativos
 Grados I. Informatica, Computadores & Software
 Dept. Arquitectura de Computadores - UMA
 
+// -----------------------------------------------------------------------
+//  NOMBRE Y APELLIDOS: AITOR GUSTAVO CAMACHO GUTIERREZ
+//  DNI:53741197-H        GRUPO : COMPUTADORES C (TARDE)
+// -----------------------------------------------------------------------
+
 Some code adapted from "Fundamentos de Sistemas Operativos", Silberschatz et al.
 
 To compile and run the program:
@@ -36,7 +41,7 @@ int main(void)
 
 	while (1)   /* Program terminates normally inside get_command() after ^D is typed*/
 	{   		
-		printf("COMMANDO->");
+		printf("\n COMMANDO->");
 		fflush(stdout);
 		get_command(inputBuffer, MAX_LINE, args, &background);  
 		/* get_command va a leer lo que el usuario introduzca en la línea de comandos, lo va a separar y lo añadirá a "args" desmembrado cada comando.
@@ -72,17 +77,32 @@ int main(void)
 				*OJO* -> en la variable status, se guarda un valor que indica la causa de terminación de la tarea (Si ha finalizado, si ha finalizado con errores)
 			(2.3) Para analizar esto, usamos la función "analyze_status" que se encuentra en "job_control", el resultado de ello lo guardamos en la variable
 			ya creada en la plantilla la cual es "status_res"
+			(2.4) En el printf con args[0] mostramos la primera posición del array donde se ha guardado el comando, el pid del hijo con la variable pid_fork, y con info,
+			información sobre el estado de la misma.
+			
+
 		*/
 	pid_fork=fork();
 
 		if(pid_fork >0){
 			//Zona del padre
-			waitpid(pid_fork,&status, 0);
-			status_res = analyze_status(status,&info);
+				/*Si viene de PRIMER plano */
+			if (background ==0){
+				waitpid(pid_fork,&status, 0);
+				status_res = analyze_status(status,&info);
 
+				if(info !=255 ){
+					printf ("\n comando ' %s ' ejecutado en PRIMER plano con pid %d . Estado FINALIZADO. Info %d\n",args[0],pid_fork,info);
+				}else {
+					printf("\n comando ' %s ' ejecutado en PRIMER plano con pid %d ",args[0],pid_fork);	
+				}
 		}else{
 			//Zona del hijo
-			execvp(args[0], args); 
+				
+			execvp(args[0], args); /* <-- Sustituye todo el código por el comando que introduzcamos, de esta manera no tenemos que
+										 desarrollar los comandos, tipo ls,pwd etc*/
+			printf("\nError, comando ' %s ' no encontrado \n", args[0]);
+			exit(-1); //Si el comando introducido es erróneo o no existe, saldrá con un error.
 
 		}
 
