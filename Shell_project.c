@@ -33,12 +33,15 @@ int main(void)
 	char inputBuffer[MAX_LINE]; /* Búffer que alberga el comando introducido*/
 	int background;             /* Su valor es 1 si el comando introducido finaliza con '&' */
 	char *args[MAX_LINE/2];     /* La línea de comando tiene una longitud de 128 argumentos como máximo */
-	// VARIABLES DE UTILIZAD :
+	// VARIABLES DE UTILIDAD :
 
 	int pid_fork, pid_wait; /* pid for created and waited process */
 	int status;             /* status returned by wait */
 	enum status status_res; /* status processed by analyze_status() */
 	int info;				/* info processed by analyze_status() */
+
+	//OJO
+	ignore_terminal_signals();
 
 	while (1)   /* Program terminates normally inside get_command() after ^D is typed*/
 	{   		
@@ -95,7 +98,9 @@ int main(void)
 			ya creada en la plantilla la cual es "status_res"
 			(2.4) En el printf con args[0] mostramos la primera posición del array donde se ha guardado el comando, el pid del hijo con la variable pid_fork, y con info,
 			información sobre el estado de la misma. En info se guarda el estado, si es 255 significa que ha habido un error o el comando no existe../M
-			
+			(2.5) WUNTRACED nos indica si el proceso ha sido suspendido
+			(2.6) Con la función analyze_status , analiza el entero status por la llamada waitpid y devuelve la causa de terminación
+			de una tarea y la información adicional asociada a dicha terminación (info)
 
 		*/
 	pid_fork=fork();
@@ -104,14 +109,21 @@ int main(void)
 			//Zona del padre
 				/*Si viene de PRIMER plano */
 			if (background ==0){
-				waitpid(pid_fork,&status, 0);
-				status_res = analyze_status(status,&info);
+				waitpid(pid_fork,&status, WUNTRACED);
+				set_terminal(getpid()); /*Con esta función recupero el terminal, getpid me da el PID*/
+				status_res = analyze_status(status,&info); //Guardamos en una variable el estado actual del proceso
 
-				if(info !=255 ){ //Si es distinto a 255 es que no ha habido un
-					printf ("\n Comando  ' %s '  ejecutado en PRIMER plano con pid %d . Estado FINALIZADO. Info %d\n",args[0],pid_fork,info);
-					
+				if(status_res == SUSPENDED) { //En caso de que haya sido SUSPENDIDO
+				printf ("\n Comando  ' %s '  ejecutado en PRIMER plano con PID %d . Estado %s. Info %d \n",
+				args[0],pid_fork, status_strings[status_res],info);
+
+				} else if (status_res == EXITED) //En caso de que haya FINALIZADO
+				{
+					if(info !=255 ){ //Si es distinto a 255 es que no ha habido un
+					printf ("\n Comando  ' %s '  ejecutado en PRIMER plano con pid %d . Estado %s. Info %d \n",
+					args[0],pid_fork, status_strings[status_res] ,info);
 				}
-				
+				}
 			}
 			else {
 					printf("\n comando ' %s '  ejecutado en SEGUNDO plano con pid %d ",args[0],pid_fork);	
@@ -119,7 +131,11 @@ int main(void)
 		}
 		else{
 			//Zona del hijo
-				
+			new_process_group(getpid());
+			if (background == 0){
+				set_terminal(getpid());
+			}
+			restore_terminal_signals();
 			execvp(args[0], args); /* <-- Sustituye todo el código por el comando que introduzcamos, de esta manera no tenemos que
 										 desarrollar los comandos, tipo ls,pwd etc*/
 			printf("\nError, comando ' %s ' no encontrado \n", args[0]);
