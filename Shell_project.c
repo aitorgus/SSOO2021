@@ -20,6 +20,7 @@ To compile and run the program:
 **/
 
 #include "job_control.h"   // remember to compile with module job_control.c 
+#include <string.h>
 
 #define MAX_LINE 256 /* 256 chars per line, per command, should be enough. */
 
@@ -44,14 +45,38 @@ int main(void)
 		printf("\n Inserte comando->");
 		fflush(stdout);
 		get_command(inputBuffer, MAX_LINE, args, &background);  
-		/* get_command va a leer lo que el usuario introduzca en la línea de comandos, lo va a separar y lo añadirá a "args" desmembrado cada comando.
+		/* get_command va a recoger y leer  lo que el usuario introduzca en la línea de comandos, lo va a separar y lo añadirá a "args" desmembrado cada comando.
 		(1)args es un array de Strings donde va a introducir cada "pieza" de los comandos introducidos
-		 (1.1) -> Por ejemplo, si introducimos "ls -l", tendremos args[0]="ls", args[1]="-l" y args[2]=NULL.
+		 -(1.1) -> Por ejemplo, si introducimos "ls -l", tendremos args[0]="ls", args[1]="-l" y args[2]=NULL.
 		(2) -> "background" (porque la va a modificar) es una variable pasada por referencia, se pondrá a 1 (true) si el comando termina con "&"
 		clave para diferenciar un programa en primer plano o segundo plano
 		*/ 
 		
 		if(args[0]==NULL) continue;   // if empty command
+
+// -----------------------------------------------------------------------
+//                IMPLEMENTACIÓN DE COMANDOS CD          
+// -----------------------------------------------------------------------
+
+		/* (1) --> Para implementar el comando cd, usaremos "strcmp" para comparar strings. En este caso,
+		comprobamos un string que ha sido alojado en arg[0], es decir un comando y lo comparamos con la palabra clave
+		"cd" que es el comando que queremos implementar
+		  (2) -> Con esta fórmula podemos saber si el usuario ha usado el comando cd.
+		  (3) -> Como cd se usa sin opciones ni atributos, el siguiente fragmento que coge getcommand 
+		  es la ruta del directorio, ubicada en args[1].
+		  (4) strcmp hace una comparación . Devuelve 0 si son iguales, los booleanos se interpretan como false,
+		  lo que en este caso podría crear un cortocircuito en el if, por ello negamos if(!strcmp(args[0],"cd"))
+
+		*/
+
+		if(!strcmp(args[0], "cd")){ 
+			chdir(args[1]); 
+			continue;
+
+		}
+		if (!strcmp (args[0], "salir")){
+			exit(0); //Función para salir de la shell . 
+		}
 // -----------------------------------------------------------------------
 //                 GENERAR UN PROCESO HIJO CON FORK         
 // -----------------------------------------------------------------------
