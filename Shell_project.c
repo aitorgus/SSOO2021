@@ -41,7 +41,7 @@ int main(void)
 
 	while (1)   /* Program terminates normally inside get_command() after ^D is typed*/
 	{   		
-		printf("\n COMMANDO->");
+		printf("\n Inserte comando->");
 		fflush(stdout);
 		get_command(inputBuffer, MAX_LINE, args, &background);  
 		/* get_command va a leer lo que el usuario introduzca en la línea de comandos, lo va a separar y lo añadirá a "args" desmembrado cada comando.
@@ -52,15 +52,6 @@ int main(void)
 		*/ 
 		
 		if(args[0]==NULL) continue;   // if empty command
-
-		/* the steps are:
-			 (1) fork a child process using fork()
-			 (2) the child process will invoke execvp()
-			 (3) if background == 0, the parent will wait, otherwise continue 
-			 (4) Shell shows a status message for processed command 
-			 (5) loop returns to get_commnad() function
-		*/
-
 // -----------------------------------------------------------------------
 //                 GENERAR UN PROCESO HIJO CON FORK         
 // -----------------------------------------------------------------------
@@ -78,7 +69,7 @@ int main(void)
 			(2.3) Para analizar esto, usamos la función "analyze_status" que se encuentra en "job_control", el resultado de ello lo guardamos en la variable
 			ya creada en la plantilla la cual es "status_res"
 			(2.4) En el printf con args[0] mostramos la primera posición del array donde se ha guardado el comando, el pid del hijo con la variable pid_fork, y con info,
-			información sobre el estado de la misma.
+			información sobre el estado de la misma. En info se guarda el estado, si es 255 significa que ha habido un error o el comando no existe../M
 			
 
 		*/
@@ -92,11 +83,16 @@ int main(void)
 				status_res = analyze_status(status,&info);
 
 				if(info !=255 ){ //Si es distinto a 255 es que no ha habido un
-					printf ("\n comando ' %s ' ejecutado en PRIMER plano con pid %d . Estado FINALIZADO. Info %d\n",args[0],pid_fork,info);
-				}else {
-					printf("\n comando ' %s ' ejecutado en PRIMER plano con pid %d ",args[0],pid_fork);	
+					printf ("\n Comando  ' %s '  ejecutado en PRIMER plano con pid %d . Estado FINALIZADO. Info %d\n",args[0],pid_fork,info);
+					
 				}
-		}else{
+				
+			}
+			else {
+					printf("\n comando ' %s '  ejecutado en SEGUNDO plano con pid %d ",args[0],pid_fork);	
+				}
+		}
+		else{
 			//Zona del hijo
 				
 			execvp(args[0], args); /* <-- Sustituye todo el código por el comando que introduzcamos, de esta manera no tenemos que
@@ -107,5 +103,4 @@ int main(void)
 		}
 
 	} 
-}
 }
