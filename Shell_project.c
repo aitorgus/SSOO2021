@@ -91,7 +91,7 @@ int main(void)
 				waitpid(pid_fork,&status, 0);
 				status_res = analyze_status(status,&info);
 
-				if(info !=255 ){
+				if(info !=255 ){ //Si es distinto a 255 es que no ha habido un
 					printf ("\n comando ' %s ' ejecutado en PRIMER plano con pid %d . Estado FINALIZADO. Info %d\n",args[0],pid_fork,info);
 				}else {
 					printf("\n comando ' %s ' ejecutado en PRIMER plano con pid %d ",args[0],pid_fork);	
@@ -107,4 +107,5 @@ int main(void)
 		}
 
 	} 
+}
 }
