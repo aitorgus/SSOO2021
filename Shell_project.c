@@ -13,7 +13,7 @@ Dept. Arquitectura de Computadores - UMA
 
 Some code adapted from "Fundamentos de Sistemas Operativos", Silberschatz et al.
 
-To compile and run the program:
+Para compilar y arrancar el programa:
    $ gcc Shell_project.c job_control.c -o Shell
    $ ./Shell          
 	(then type ^D to exit program)
@@ -48,7 +48,7 @@ void manejador (int senal){
 		Con WWNOHANG, compruebo si el proceso ha cambiado de estado.
 	*/
 
-		pid_wait = waitpid(proceso->pgid, &status, WUNTRACED | WNOHANG);
+		pid_wait = waitpid(proceso->pgid, &status, WUNTRACED | WNOHANG | WCONTINUED) ;
 
 		if (pid_wait == proceso->pgid) 
 		// El PID de un proceso recogido por waitpid, nunca será 0, y si no se recoge, no se le asigna valor
