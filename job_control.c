@@ -41,7 +41,7 @@ void get_command(char inputBuffer[], int size, char *args[],int *background)
 		exit(0);            /* ^d was entered, end of user command stream */
 	} 
 	if (length < 0){
-		perror("error reading the command");
+		perror("Error al leer el comando");
 		exit(-1);           /* terminate with error code of -1 */
 	}
 

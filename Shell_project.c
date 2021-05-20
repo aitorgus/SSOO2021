@@ -25,7 +25,7 @@ To compile and run the program:
 #define MAX_LINE 256 /* 256 chars per line, per command, should be enough. */
 
 job *Lista_tareas; //Lista de tareas (lo declaro aquí para que las funciones tengan visibilidad sobre ella)
-int primerplano=0;
+
 
 /*--> DECLARACIÓN DE FUNCIONES */
 
@@ -65,34 +65,31 @@ void manejador (int senal){
 				 la señal SIGCHLD , usaremos una función bloqueante como block_SIGCHLD();
 			
 			*/
-			if (status_res == SUSPENDED) 
-			{
-				printf("\n Comando %s ejecutado en SEGUNDO plano con PID %d ha SUSPENDIDO su ejecución \n ",
+				if ((status_res == EXITED) || (status_res == SIGNALED))
+				{
+					printf(" \nComando %s ejecutado en SEGUNDO plano con PID %d ha TERMINADO \n ",
 				 proceso->command,proceso->pgid);
-
-				proceso->state = STOPPED;
-
-			} else if (status_res == EXITED) // || (status_res == SIGNALED)
-			{
-				printf(" \nComando %s ejecutado en SEGUNDO plano con PID %d ha TERMINADO su ejecución \n ",
-				 proceso->command,proceso->pgid);
+				 //Como el proceso ha terminado, lo sacamos de nuestra Lista de tareas
 				 delete_job(Lista_tareas, proceso);
+				 indice--; //Como hemos sacado una tarea de la Lista de tareas, el que le precedía, toma su lugar
+			
+					}  
+					if (status_res == SUSPENDED) 
+					{
+				 printf("\n Comando %s ejecutado en SEGUNDO plano con PID %d se ha SUSPENDIDO \n ",
+				 proceso->command,proceso->pgid);
+				 proceso->state = STOPPED;
 
-
-			}
+					} 
+					if (status_res ==CONTINUED)
+					{
+						proceso->state = BACKGROUND;
+						}
 		}
 		
 	}
-	
-	
-	unblock_SIGCHLD();
+	unblock_SIGCHLD(); //Cuando terminemos con el proceso en curso, se deja entrar otra petición
 }
-
-
-
-
-
-
 
 // -----------------------------------------------------------------------
 //                            MAIN          
@@ -112,7 +109,7 @@ int main(void)
 
 	//NUEVAS DECLARACIONES DE VARIABLE
 	job *proceso;
-
+	int primerplano=0;
 	//OJO
 	ignore_terminal_signals(); // *** MACRO TRAIDA DEL JOB_CONTROL
 	signal(SIGCHLD, manejador);
@@ -133,7 +130,7 @@ int main(void)
 		if(args[0]==NULL) continue;   // if empty command
 
 // -----------------------------------------------------------------------
-//                IMPLEMENTACIÓN DE COMANDOS CD          
+//                IMPLEMENTACIÓN DE COMANDO CD          
 // -----------------------------------------------------------------------
 
 		/* (1) --> Para implementar el comando cd, usaremos "strcmp" para comparar strings. En este caso,
@@ -152,34 +149,47 @@ int main(void)
 			continue;
 
 		}
-		if (!strcmp (args[0], "salir")){
+	/* 	if (!strcmp (args[0], "salir")){
 			printf("\n Has salido de la Shell de Aitor \n");
 			exit(0); //Función para salir de la shell . 
-		}
+		} */
+		// -----------------------------------------------------------------------
+//                IMPLEMENTACIÓN DE COMANDO JOBS         
+// -----------------------------------------------------------------------
 		if (!strcmp (args[0], "jobs")){
 			block_SIGCHLD();
 			print_job_list(Lista_tareas); //Imprimo la lista de tareas
 			unblock_SIGCHLD();
 			continue;
 		}
+	// -----------------------------------------------------------------------
+//                IMPLEMENTACIÓN DE COMANDO BG          
+// -----------------------------------------------------------------------
+
 		if (!strcmp (args[0], "bg")){
 			block_SIGCHLD();
 			int posicion =1;
 			if (args[1] == NULL) {
 				//Si no ha añadido como parámetro un número, es nulo
 			posicion = atoi(args[1]) ; //Convertimos un String a un valor numérico
+			unblock_SIGCHLD();
+			continue;
 		} //Tenemos que comprobar que el valor que se pasa por parámetro sea válido (posición de la lista de tareas)
 			proceso=get_item_bypos(Lista_tareas,posicion); //<-- la función get_item_byposs comprueba el rango y
 			// nos informa de si no se ha encontrado una tarea en esa posición
-			if((proceso != NULL) && (proceso->state == STOPPED)){
+			if((proceso != NULL) && (proceso->state == STOPPED))
+			{
 				proceso -> state = BACKGROUND;
-				killpg(proceso->pgid, SIGCONT);
+				killpg(proceso->pgid, SIGCHLD);
 			}
-			unblock_SIGCHLD();
-			continue;
-		
+			
 		}
-		if (!strcmp(args[0],"fg")) {
+
+// -----------------------------------------------------------------------
+//                IMPLEMENTACIÓN DE COMANDO FG          
+// -----------------------------------------------------------------------
+
+/* 		if (!strcmp(args[0],"fg")) {
 			block_SIGCHLD();
 			int posicion = 1;
 			primerplano=1; //La ponemos a TRUE
@@ -199,7 +209,7 @@ int main(void)
 			} 
 			unblock_SIGCHLD();
 			
-		}
+		} */
 // -----------------------------------------------------------------------
 //                 GENERAR UN PROCESO HIJO CON FORK         
 // -----------------------------------------------------------------------
@@ -223,7 +233,8 @@ int main(void)
 			de una tarea y la información adicional asociada a dicha terminación (info)
 
 		*/
-	if(!primerplano) pid_fork=fork();
+	/* if(!primerplano) */ 
+	pid_fork=fork();
 
 		if(pid_fork >0){
 			//Zona del padre
@@ -252,7 +263,7 @@ int main(void)
 					args[0],pid_fork, status_strings[status_res] ,info);
 				}
 				}
-				primerplano=0;
+				primerplano=0; //De esta forma indicamos de que ya no hay un proceso en PRIMER PLANO
 			}
 			else {		/*Se le pasa como parámedtro (PID,COMANDO (que se en cuentra en la posición 0 del array args))
 							y el estado (funcion job_state (state))*/
@@ -278,5 +289,5 @@ int main(void)
 
 		}
 
-	} 
+	} /*Final del bucle infinito WHILE*/
 }
