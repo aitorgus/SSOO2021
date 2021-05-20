@@ -30,39 +30,50 @@ job *Lista_tareas; //Lista de tareas (lo declaro aquí para que las funciones te
 /*--> DECLARACIÓN DE FUNCIONES */
 
 void manejador (int senal){
-	job *item;
-	int status;
-	int info,indice;
+	job *proceso;
+	int status,info,indice;
 	int pid_wait=0; 
 	enum status status_res;
 
-	//List_size -> (Número de trabajos en la lista)
-	for (int indice = 1 ; indice < list_size(Lista_tareas) ; indice++)
-	{
-		item= get_item_bypop(Lista_tareas,indice);
+	//List_size -> (Número de trabajos en la lista), esta empieza en el 1
+	for (indice = 1 ; indice <= list_size(Lista_tareas) ; indice++)
+	{	
+		//Haremos un wait a cada uno de los comandos
+		proceso= get_item_bypos(Lista_tareas,indice);
 
 		/*Queremos detectar cuando un proceso es suspendido, por ello usamos WUNTRACED
 		La única forma que tenemo de saber de que waitpid ha recogido un proceso, es que la variable 
 		cambie de valor (pid_wait), por ello lo inicializamos con un valor de 0.
+		Con WWNOHANG, compruebo si el proceso ha cambiado de estado.
 	*/
 
-		pid_wait = waitpid(item->pgid, &status, WUNTRACED | WNOHANG);
+		pid_wait = waitpid(proceso->pgid, &status, WUNTRACED | WNOHANG);
 
-		if (pid_wait == item->pgid) 
+		if (pid_wait == proceso->pgid) 
 		// El PID de un proceso recogido por waitpid, nunca será 0, y si no se recoge, no se le asigna valor
 		{
 			//Como ha cambiado de estado, usamos analyze para conocer en que estado se encuentra
 			status_res = analyze_status(status, &info);
 
-			/* (1) Si el estado del proceso es EXITED (finalizado)
+			/* (1) Si el estado del proceso es SUSPENDED (Suspendido)
+				-Actualizamos la lista con el estado del proceso a STOPPED (Detenido)
+			   (2)Si el estado del proceso es EXITED (TERMINADO)
+			     -Tenemos que eliminarlo de la lista, con la función delete_job()
 			
 			*/
 			if (status_res == SUSPENDED) 
 			{
-				printf("Comando %s ejecutado en SEGUNDO plano con PID %d ha terminado su ejecución, ", item->command,item->pgid);
+				printf("\n Comando %s ejecutado en SEGUNDO plano con PID %d ha SUSPENDIDO su ejecución \n ",
+				 proceso->command,proceso->pgid);
+
+				proceso->state = STOPPED;
 
 			} else if (status_res == EXITED) // || (status_res == SIGNALED)
 			{
+				printf(" \nComando %s ejecutado en SEGUNDO plano con PID %d ha TERMINADO su ejecución \n ",
+				 proceso->command,proceso->pgid);
+				 delete_job(Lista_tareas, proceso);
+
 
 			}
 		}
@@ -96,7 +107,7 @@ int main(void)
 	int info;				/* info processed by analyze_status() */
 
 	//NUEVAS DECLARACIONES DE VARIABLE
-	job *item;
+	job *proceso;
 
 	//OJO
 	ignore_terminal_signals(); // *** MACRO TRAIDA DEL JOB_CONTROL
@@ -176,9 +187,9 @@ int main(void)
 				if(status_res == SUSPENDED) { //En caso de que haya sido SUSPENDIDO
 				//Si el trabajo es suspendido, hay que añadirlo a la lista e indicar que ha sido detenido (STOPPED)
 
-				item=new_job(pid_fork, args[0], STOPPED);
+				proceso=new_job(pid_fork, args[0], STOPPED);
 					
-					add_job(Lista_tareas,item);
+					add_job(Lista_tareas,proceso);
 
 				printf ("\n Comando  ' %s '  ejecutado en PRIMER plano con PID %d . Estado %s. Info %d \n",
 				args[0],pid_fork, status_strings[status_res],info);
@@ -194,9 +205,9 @@ int main(void)
 			else {		/*Se le pasa como parámedtro (PID,COMANDO (que se en cuentra en la posición 0 del array args))
 							y el estado (funcion job_state (state))*/
 
-					item=new_job(pid_fork, args[0], BACKGROUND);
-					//Inserto el nuevo trabajo a la lista de tareas y el item
-					add_job(Lista_tareas,item);
+					proceso=new_job(pid_fork, args[0], BACKGROUND);
+					//Inserto el nuevo trabajo a la lista de tareas y el proceso
+					add_job(Lista_tareas,proceso);
 					printf("\n comando ' %s '  ejecutado en SEGUNDO plano con pid %d ",args[0],pid_fork);	
 				}
 		}
