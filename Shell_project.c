@@ -67,7 +67,7 @@ void manejador (int senal){
 			*/
 				if ((status_res == EXITED) || (status_res == SIGNALED))
 				{
-					printf(" \nComando %s ejecutado en SEGUNDO plano con PID %d ha TERMINADO \n ",
+					printf(" \n El comando '%s' ejecutado en SEGUNDO plano con PID %d ha TERMINADO \n ",
 				 proceso->command,proceso->pgid);
 				 //Como el proceso ha terminado, lo sacamos de nuestra Lista de tareas
 				 delete_job(Lista_tareas, proceso);
@@ -76,7 +76,7 @@ void manejador (int senal){
 					}  
 					if (status_res == SUSPENDED) 
 					{
-				 printf("\n Comando %s ejecutado en SEGUNDO plano con PID %d se ha SUSPENDIDO \n ",
+				 printf("\n Comando '%s' ejecutado en SEGUNDO plano con PID %d se ha SUSPENDIDO \n ",
 				 proceso->command,proceso->pgid);
 				 proceso->state = STOPPED;
 
@@ -85,7 +85,7 @@ void manejador (int senal){
 					{
 						proceso->state = BACKGROUND;
 						}
-		}
+							}
 		
 	}
 	unblock_SIGCHLD(); //Cuando terminemos con el proceso en curso, se deja entrar otra petición
@@ -100,6 +100,7 @@ int main(void)
 	char inputBuffer[MAX_LINE]; /* Búffer que alberga el comando introducido*/
 	int background;             /* Su valor es 1 si el comando introducido finaliza con '&' */
 	char *args[MAX_LINE/2];     /* La línea de comando tiene una longitud de 128 argumentos como máximo */
+
 	// VARIABLES DE UTILIDAD :
 
 	int pid_fork, pid_wait; /* pid for created and waited process */
@@ -112,6 +113,7 @@ int main(void)
 	int primerplano=0;
 	//OJO
 	ignore_terminal_signals(); // *** MACRO TRAIDA DEL JOB_CONTROL
+
 	signal(SIGCHLD, manejador);
 	Lista_tareas=new_list("Lista de tareas");
 
@@ -127,8 +129,7 @@ int main(void)
 		clave para diferenciar un programa en primer plano o segundo plano
 		*/ 
 		
-		if(args[0]==NULL) continue;   // if empty command
-
+		if(args[0]==NULL) continue;   // Si se introduce un comando vacío, no hará nada, sólo seguirá pidiendo comandos
 // -----------------------------------------------------------------------
 //                IMPLEMENTACIÓN DE COMANDO CD          
 // -----------------------------------------------------------------------
@@ -145,7 +146,7 @@ int main(void)
 		*/
 
 		if(!strcmp(args[0], "cd")){ 
-			chdir(args[1]); 
+			chdir(args[1]);  //Con chdir tratamos de implementar el comando interno "cd"
 			continue;
 
 		}
@@ -169,7 +170,7 @@ int main(void)
 		if (!strcmp (args[0], "bg")){
 			block_SIGCHLD();
 			int posicion =1;
-			if (args[1] == NULL) {
+			if (args[1] != NULL) {
 				//Si no ha añadido como parámetro un número, es nulo
 			posicion = atoi(args[1]) ; //Convertimos un String a un valor numérico
 			unblock_SIGCHLD();
