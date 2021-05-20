@@ -190,7 +190,7 @@ int main(void)
 //                IMPLEMENTACIÓN DE COMANDO FG          
 // -----------------------------------------------------------------------
 
-/* 		if (!strcmp(args[0],"fg")) {
+		if (!strcmp(args[0],"fg")) {
 			block_SIGCHLD();
 			int posicion = 1;
 			primerplano=1; //La ponemos a TRUE
@@ -210,7 +210,7 @@ int main(void)
 			} 
 			unblock_SIGCHLD();
 			
-		} */
+		}
 // -----------------------------------------------------------------------
 //                 GENERAR UN PROCESO HIJO CON FORK         
 // -----------------------------------------------------------------------
