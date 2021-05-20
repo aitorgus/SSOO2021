@@ -22,8 +22,62 @@ To compile and run the program:
 
 #include "job_control.h"   // remember to compile with module job_control.c 
 #include <string.h>
-
 #define MAX_LINE 256 /* 256 chars per line, per command, should be enough. */
+
+job *Lista_tareas; //Lista de tareas (lo declaro aquí para que las funciones tengan visibilidad sobre ella)
+
+
+/*--> DECLARACIÓN DE FUNCIONES */
+
+void manejador (int senal){
+	job *item;
+	int status;
+	int info,indice;
+	int pid_wait=0; 
+	enum status status_res;
+
+	//List_size -> (Número de trabajos en la lista)
+	for (int indice = 1 ; indice < list_size(Lista_tareas) ; indice++)
+	{
+		item= get_item_bypop(Lista_tareas,indice);
+
+		/*Queremos detectar cuando un proceso es suspendido, por ello usamos WUNTRACED
+		La única forma que tenemo de saber de que waitpid ha recogido un proceso, es que la variable 
+		cambie de valor (pid_wait), por ello lo inicializamos con un valor de 0.
+	*/
+
+		pid_wait = waitpid(item->pgid, &status, WUNTRACED | WNOHANG);
+
+		if (pid_wait == item->pgid) 
+		// El PID de un proceso recogido por waitpid, nunca será 0, y si no se recoge, no se le asigna valor
+		{
+			//Como ha cambiado de estado, usamos analyze para conocer en que estado se encuentra
+			status_res = analyze_status(status, &info);
+
+			/* (1) Si el estado del proceso es EXITED (finalizado)
+			
+			*/
+			if (status_res == SUSPENDED) 
+			{
+				printf("Comando %s ejecutado en SEGUNDO plano con PID %d ha terminado su ejecución, ", item->command,item->pgid);
+
+			} else if (status_res == EXITED) // || (status_res == SIGNALED)
+			{
+
+			}
+		}
+		
+	}
+	
+	
+
+}
+
+
+
+
+
+
 
 // -----------------------------------------------------------------------
 //                            MAIN          
@@ -41,8 +95,13 @@ int main(void)
 	enum status status_res; /* status processed by analyze_status() */
 	int info;				/* info processed by analyze_status() */
 
+	//NUEVAS DECLARACIONES DE VARIABLE
+	job *item;
+
 	//OJO
-	ignore_terminal_signals();
+	ignore_terminal_signals(); // *** MACRO TRAIDA DEL JOB_CONTROL
+	signal(SIGCHLD, manejador);
+	Lista_tareas=new_list("Lista_tareas");
 
 	while (1)   /* Program terminates normally inside get_command() after ^D is typed*/
 	{   		
@@ -115,6 +174,12 @@ int main(void)
 				status_res = analyze_status(status,&info); //Guardamos en una variable el estado actual del proceso
 
 				if(status_res == SUSPENDED) { //En caso de que haya sido SUSPENDIDO
+				//Si el trabajo es suspendido, hay que añadirlo a la lista e indicar que ha sido detenido (STOPPED)
+
+				item=new_job(pid_fork, args[0], STOPPED);
+					
+					add_job(Lista_tareas,item);
+
 				printf ("\n Comando  ' %s '  ejecutado en PRIMER plano con PID %d . Estado %s. Info %d \n",
 				args[0],pid_fork, status_strings[status_res],info);
 
@@ -126,7 +191,12 @@ int main(void)
 				}
 				}
 			}
-			else {
+			else {		/*Se le pasa como parámedtro (PID,COMANDO (que se en cuentra en la posición 0 del array args))
+							y el estado (funcion job_state (state))*/
+
+					item=new_job(pid_fork, args[0], BACKGROUND);
+					//Inserto el nuevo trabajo a la lista de tareas y el item
+					add_job(Lista_tareas,item);
 					printf("\n comando ' %s '  ejecutado en SEGUNDO plano con pid %d ",args[0],pid_fork);	
 				}
 		}
