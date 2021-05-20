@@ -25,11 +25,12 @@ To compile and run the program:
 #define MAX_LINE 256 /* 256 chars per line, per command, should be enough. */
 
 job *Lista_tareas; //Lista de tareas (lo declaro aquí para que las funciones tengan visibilidad sobre ella)
-
+int primerplano=0;
 
 /*--> DECLARACIÓN DE FUNCIONES */
 
 void manejador (int senal){
+	block_SIGCHLD();
 	job *proceso;
 	int status,info,indice;
 	int pid_wait=0; 
@@ -59,6 +60,9 @@ void manejador (int senal){
 				-Actualizamos la lista con el estado del proceso a STOPPED (Detenido)
 			   (2)Si el estado del proceso es EXITED (TERMINADO)
 			     -Tenemos que eliminarlo de la lista, con la función delete_job()
+
+				 (*) El código debe de ser reentrante, los procesos en segundo plano irán terminando y lanzando
+				 la señal SIGCHLD , usaremos una función bloqueante como block_SIGCHLD();
 			
 			*/
 			if (status_res == SUSPENDED) 
@@ -81,7 +85,7 @@ void manejador (int senal){
 	}
 	
 	
-
+	unblock_SIGCHLD();
 }
 
 
@@ -112,11 +116,11 @@ int main(void)
 	//OJO
 	ignore_terminal_signals(); // *** MACRO TRAIDA DEL JOB_CONTROL
 	signal(SIGCHLD, manejador);
-	Lista_tareas=new_list("Lista_tareas");
+	Lista_tareas=new_list("Lista de tareas");
 
 	while (1)   /* Program terminates normally inside get_command() after ^D is typed*/
 	{   		
-		printf("\n Inserte comando->");
+		printf("\n Shell AGCG : Inserte comando->");
 		fflush(stdout);
 		get_command(inputBuffer, MAX_LINE, args, &background);  
 		/* get_command va a recoger y leer  lo que el usuario introduzca en la línea de comandos, lo va a separar y lo añadirá a "args" desmembrado cada comando.
@@ -149,7 +153,52 @@ int main(void)
 
 		}
 		if (!strcmp (args[0], "salir")){
+			printf("\n Has salido de la Shell de Aitor \n");
 			exit(0); //Función para salir de la shell . 
+		}
+		if (!strcmp (args[0], "jobs")){
+			block_SIGCHLD();
+			print_job_list(Lista_tareas); //Imprimo la lista de tareas
+			unblock_SIGCHLD();
+			continue;
+		}
+		if (!strcmp (args[0], "bg")){
+			block_SIGCHLD();
+			int posicion =1;
+			if (args[1] == NULL) {
+				//Si no ha añadido como parámetro un número, es nulo
+			posicion = atoi(args[1]) ; //Convertimos un String a un valor numérico
+		} //Tenemos que comprobar que el valor que se pasa por parámetro sea válido (posición de la lista de tareas)
+			proceso=get_item_bypos(Lista_tareas,posicion); //<-- la función get_item_byposs comprueba el rango y
+			// nos informa de si no se ha encontrado una tarea en esa posición
+			if((proceso != NULL) && (proceso->state == STOPPED)){
+				proceso -> state = BACKGROUND;
+				killpg(proceso->pgid, SIGCONT);
+			}
+			unblock_SIGCHLD();
+			continue;
+		
+		}
+		if (!strcmp(args[0],"fg")) {
+			block_SIGCHLD();
+			int posicion = 1;
+			primerplano=1; //La ponemos a TRUE
+			if (args[1] !=NULL)
+			{
+				posicion=atoi(args[1]);
+			}
+			proceso= get_item_bypos(Lista_tareas,posicion);
+			if ( proceso != NULL) {
+				set_terminal(proceso->pgid); //Estamos cediendo el terminal de un proceso de 2º plano a 1º plano
+				if(proceso->state == STOPPED) {
+					killpg(proceso->pgid,SIGCONT);
+				}
+				pid_fork=proceso->pgid;
+				delete_job(Lista_tareas,proceso);
+
+			} 
+			unblock_SIGCHLD();
+			
 		}
 // -----------------------------------------------------------------------
 //                 GENERAR UN PROCESO HIJO CON FORK         
@@ -174,7 +223,7 @@ int main(void)
 			de una tarea y la información adicional asociada a dicha terminación (info)
 
 		*/
-	pid_fork=fork();
+	if(!primerplano) pid_fork=fork();
 
 		if(pid_fork >0){
 			//Zona del padre
@@ -182,17 +231,19 @@ int main(void)
 			if (background ==0){
 				waitpid(pid_fork,&status, WUNTRACED);
 				set_terminal(getpid()); /*Con esta función recupero el terminal, getpid me da el PID*/
+				
 				status_res = analyze_status(status,&info); //Guardamos en una variable el estado actual del proceso
 
 				if(status_res == SUSPENDED) { //En caso de que haya sido SUSPENDIDO
+				block_SIGCHLD();
 				//Si el trabajo es suspendido, hay que añadirlo a la lista e indicar que ha sido detenido (STOPPED)
-
 				proceso=new_job(pid_fork, args[0], STOPPED);
 					
 					add_job(Lista_tareas,proceso);
 
 				printf ("\n Comando  ' %s '  ejecutado en PRIMER plano con PID %d . Estado %s. Info %d \n",
 				args[0],pid_fork, status_strings[status_res],info);
+				unblock_SIGCHLD();
 
 				} else if (status_res == EXITED) //En caso de que haya FINALIZADO
 				{
@@ -201,14 +252,16 @@ int main(void)
 					args[0],pid_fork, status_strings[status_res] ,info);
 				}
 				}
+				primerplano=0;
 			}
 			else {		/*Se le pasa como parámedtro (PID,COMANDO (que se en cuentra en la posición 0 del array args))
 							y el estado (funcion job_state (state))*/
-
+					block_SIGCHLD();
 					proceso=new_job(pid_fork, args[0], BACKGROUND);
 					//Inserto el nuevo trabajo a la lista de tareas y el proceso
 					add_job(Lista_tareas,proceso);
 					printf("\n comando ' %s '  ejecutado en SEGUNDO plano con pid %d ",args[0],pid_fork);	
+					unblock_SIGCHLD();
 				}
 		}
 		else{

@@ -37,7 +37,7 @@ void get_command(char inputBuffer[], int size, char *args[],int *background)
 	start = -1;
 	if (length == 0)
 	{
-		printf("\nBye\n");
+		printf("\n Has salido de la Shell de Aitor \n");
 		exit(0);            /* ^d was entered, end of user command stream */
 	} 
 	if (length < 0){
@@ -170,7 +170,7 @@ void print_list(job * list, void (*print)(job *))
 {
 	int n=1;
 	job * aux=list;
-	printf("Contents of %s:\n",list->command);
+	printf("Contenido de la %s:\n",list->command);
 	while(aux->next!= NULL) 
 	{
 		printf(" [%d] ",n);
