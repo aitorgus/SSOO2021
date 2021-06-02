@@ -13,7 +13,7 @@ Dept. Arquitectura de Computadores - UMA
 
 Some code adapted from "Fundamentos de Sistemas Operativos", Silberschatz et al.
 
-Para compilar y arrancar el programa:
+To compile and run the program:
    $ gcc Shell_project.c job_control.c -o Shell
    $ ./Shell          
 	(then type ^D to exit program)
@@ -48,7 +48,7 @@ void manejador (int senal){
 		Con WWNOHANG, compruebo si el proceso ha cambiado de estado.
 	*/
 
-		pid_wait = waitpid(proceso->pgid, &status, WUNTRACED | WNOHANG | WCONTINUED) ;
+		pid_wait = waitpid(proceso->pgid, &status, WUNTRACED | WNOHANG);
 
 		if (pid_wait == proceso->pgid) 
 		// El PID de un proceso recogido por waitpid, nunca será 0, y si no se recoge, no se le asigna valor
@@ -145,8 +145,11 @@ int main(void)
 
 		*/
 
-		if(!strcmp(args[0], "cd")){ 
-			chdir(args[1]);  //Con chdir tratamos de implementar el comando interno "cd"
+		if(strcmp(args[0], "cd")==0){
+			if(args[1] !=NULL){
+			chdir(args[1]); //Con chdir tratamos de implementar el comando interno "cd"
+			} 
+			  
 			continue;
 
 		}
@@ -159,7 +162,12 @@ int main(void)
 // -----------------------------------------------------------------------
 		if (!strcmp (args[0], "jobs")){
 			block_SIGCHLD();
-			print_job_list(Lista_tareas); //Imprimo la lista de tareas
+			if(empty_list(Lista_tareas)){ //Devuelve 1 si la lista está vacía
+				printf("Lista de JOBs vacía \n");
+			}else {
+				print_job_list(Lista_tareas); //Imprimo la lista de tareas
+			}	
+			
 			unblock_SIGCHLD();
 			continue;
 		}
@@ -190,7 +198,7 @@ int main(void)
 //                IMPLEMENTACIÓN DE COMANDO FG          
 // -----------------------------------------------------------------------
 
-/* 		if (!strcmp(args[0],"fg")) {
+		if (!strcmp(args[0],"fg")) {
 			block_SIGCHLD();
 			int posicion = 1;
 			primerplano=1; //La ponemos a TRUE
@@ -210,7 +218,7 @@ int main(void)
 			} 
 			unblock_SIGCHLD();
 			
-		} */
+		}
 // -----------------------------------------------------------------------
 //                 GENERAR UN PROCESO HIJO CON FORK         
 // -----------------------------------------------------------------------
